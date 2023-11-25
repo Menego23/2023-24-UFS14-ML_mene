@@ -3,6 +3,19 @@ import json
 import os
 import glob
 import sys
+import sklearn
+import pandas as pd
+from sklearn import set_config
+set_config(transform_output="pandas") 
+set_config(display='diagram')
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
+from sklearn.preprocessing import MinMaxScaler, StandardScaler, FunctionTransformer
+from sklearn.cluster import KMeans
+from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.compose import ColumnTransformer,make_column_selector, make_column_transformer
+
 
 logging.basicConfig(filename='/opt/ml/output/data/logs-training.txt', level=logging.DEBUG)
 
