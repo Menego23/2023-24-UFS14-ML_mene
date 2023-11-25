@@ -1,0 +1,5 @@
+DEBUG:root:Hello my custom SageMaker init script!
+DEBUG:root:model weights dumped to my-model-weights.json
+DEBUG:root:environment variables dumped to environment-variables.json
+DEBUG:root:sys args dumped to sys-args.json
+DEBUG:root:SM_INPUT_DIR files list dumped to sm-input-dir.json
