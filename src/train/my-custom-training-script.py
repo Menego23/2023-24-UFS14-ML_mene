@@ -1,47 +1,45 @@
-import logging
-import json
-import os
-import glob
-import sys
-import sklearn
 import pandas as pd
-from sklearn import set_config
-set_config(transform_output="pandas") 
-set_config(display='diagram')
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import OrdinalEncoder, OneHotEncoder
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, FunctionTransformer
-from sklearn.cluster import KMeans
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.compose import ColumnTransformer,make_column_selector, make_column_transformer
-
-
-logging.basicConfig(filename='/opt/ml/output/data/logs-training.txt', level=logging.DEBUG)
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+import joblib
+import os
+import logging
+import traceback
 
 if __name__ == '__main__':
-    logging.debug('Hello my custom SageMaker init script!')
+    try:
+        logging.basicConfig(level=logging.DEBUG)
 
-    my_model_weights = {
-        "yes": [1, 2, 3],
-        "no": [4]
-    }
-    f_output_model = open("/opt/ml/model/my-model-weights.json", "w")
-    f_output_model.write(json.dumps(my_model_weights, sort_keys=True, indent=4))
-    f_output_model.close()
-    logging.debug('model weights dumped to my-model-weights.json')
+        logging.debug('Loading the dataset...')
+        df = pd.read_csv('2023-24-UFS14-ML_mene/data/input/housing.csv')
+        logging.debug('Dataset loaded.')
 
-    f_output_data = open("/opt/ml/output/data/environment-variables.json", "w")
-    f_output_data.write(json.dumps(dict(os.environ), sort_keys=True, indent=4))
-    f_output_data.close()
-    logging.debug('environment variables dumped to environment-variables.json')
+        X = df.drop(columns=["median_house_value"], axis=1)
+        y = df['median_house_value']
 
-    f_output_data = open("/opt/ml/output/data/sys-args.json", "w")
-    f_output_data.write(json.dumps(sys.argv[1:], sort_keys=True, indent=4))
-    f_output_data.close()
-    logging.debug('sys args dumped to sys-args.json')
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    f_output_data = open("/opt/ml/output/data/sm-input-dir.json", "w")
-    f_output_data.write(json.dumps(glob.glob("{}/*/*/*.*".format(os.environ['SM_INPUT_DIR']))))
-    f_output_data.close()
-    logging.debug('SM_INPUT_DIR files list dumped to sm-input-dir.json')
+        model = RandomForestRegressor(random_state=42)
+
+        logging.debug('Training the model...')
+        model.fit(X_train, y_train)
+        logging.debug('Model training completed.')
+
+        y_pred = model.predict(X_test)
+
+        mse = mean_squared_error(y_test, y_pred)
+        logging.debug(f"Mean Squared Error: {mse}")
+
+        model_output_dir = os.environ['SM_MODEL_DIR']
+        logging.debug(f"Model output directory: {model_output_dir}")
+
+        logging.debug('Saving the model...')
+        joblib.dump(model, f"{model_output_dir}/model.joblib")
+        logging.debug('Model saved.')
+
+    except Exception as e:
+        logging.error(f"Error occurred: {str(e)}")
+        logging.error(traceback.format_exc())
+        
+        
