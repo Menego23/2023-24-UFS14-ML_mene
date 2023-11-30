@@ -1,11 +1,14 @@
+import logging
+import os
 import pandas as pd
-from sklearn.model_selection import train_test_split
+import traceback
+from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import joblib
-import os
-import logging
-import traceback
 
 if __name__ == '__main__':
     try:
@@ -20,13 +23,31 @@ if __name__ == '__main__':
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-        model = RandomForestRegressor(random_state=42)
+        numeric_features = X.select_dtypes(include=['int64', 'float64']).columns
+        categorical_features = X.select_dtypes(include=['object']).columns
+
+        numeric_transformer = Pipeline(steps=[
+            ('scaler', StandardScaler())
+        ])
+
+        categorical_transformer = Pipeline(steps=[
+            ('onehot', OneHotEncoder(handle_unknown='ignore'))
+        ])
+
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('num', numeric_transformer, numeric_features),
+                ('cat', categorical_transformer, categorical_features)
+            ])
+
+        pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                                   ('regressor', RandomForestRegressor(random_state=42))])
 
         logging.debug('Training the model...')
-        model.fit(X_train, y_train)
+        pipeline.fit(X_train, y_train)
         logging.debug('Model training completed.')
 
-        y_pred = model.predict(X_test)
+        y_pred = pipeline.predict(X_test)
 
         mse = mean_squared_error(y_test, y_pred)
         logging.debug(f"Mean Squared Error: {mse}")
@@ -35,11 +56,9 @@ if __name__ == '__main__':
         logging.debug(f"Model output directory: {model_output_dir}")
 
         logging.debug('Saving the model...')
-        joblib.dump(model, f"{model_output_dir}/model.joblib")
+        joblib.dump(pipeline, f"{model_output_dir}/model.joblib")
         logging.debug('Model saved.')
 
     except Exception as e:
         logging.error(f"Error occurred: {str(e)}")
         logging.error(traceback.format_exc())
-        
-        
